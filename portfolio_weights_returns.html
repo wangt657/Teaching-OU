@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Weight Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+            color: #e94560;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .controls-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #e94560;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stock-control {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border-left: 4px solid;
+        }
+        
+        .stock-control:nth-child(2) { border-color: #4ecca3; }
+        .stock-control:nth-child(3) { border-color: #ffd93d; }
+        .stock-control:nth-child(4) { border-color: #6c5ce7; }
+        
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .stock-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .stock-name.stock1 { color: #4ecca3; }
+        .stock-name.stock2 { color: #ffd93d; }
+        .stock-name.stock3 { color: #6c5ce7; }
+        
+        .weight-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .weight-input-group label {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        
+        .weight-input {
+            width: 70px;
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+        
+        .weight-input:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+        
+        .slider-group {
+            margin-top: 10px;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        
+        .return-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .return-value.positive { color: #4ecca3; }
+        .return-value.negative { color: #ff6b6b; }
+        .return-value.zero { color: #888; }
+        
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(to right, #ff6b6b 0%, #888 50%, #4ecca3 100%);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s;
+        }
+        
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .visualization-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .square-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .portfolio-square {
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: 400px;
+            margin: 0 auto;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .stock-square {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stock-square::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+        }
+        
+        .stock-square.stock1 { background: linear-gradient(135deg, #4ecca3 0%, #2d8f6f 100%); }
+        .stock-square.stock2 { background: linear-gradient(135deg, #ffd93d 0%, #c9a227 100%); }
+        .stock-square.stock3 { background: linear-gradient(135deg, #6c5ce7 0%, #4834a8 100%); }
+        
+        .square-label {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: rgba(0, 0, 0, 0.7);
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
+            z-index: 1;
+        }
+        
+        .square-weight {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: rgba(0, 0, 0, 0.8);
+            z-index: 1;
+        }
+        
+        .stats-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-card.stock1 { border-top: 3px solid #4ecca3; }
+        .stat-card.stock2 { border-top: 3px solid #ffd93d; }
+        .stat-card.stock3 { border-top: 3px solid #6c5ce7; }
+        
+        .stat-ticker {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card.stock1 .stat-ticker { color: #4ecca3; }
+        .stat-card.stock2 .stat-ticker { color: #ffd93d; }
+        .stat-card.stock3 .stat-ticker { color: #6c5ce7; }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+            color: #aaa;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .portfolio-return {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .portfolio-return-label {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        
+        .portfolio-return-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .portfolio-return-value.positive { color: #4ecca3; }
+        .portfolio-return-value.negative { color: #ff6b6b; }
+        .portfolio-return-value.zero { color: #888; }
+        
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background: linear-gradient(135deg, #e94560 0%, #c73e54 100%);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        }
+        
+        .weight-warning {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+            color: #ff6b6b;
+            text-align: center;
+            display: none;
+        }
+        
+        .weight-warning.show {
+            display: block;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+        
+        .legend-color.stock1 { background: #4ecca3; }
+        .legend-color.stock2 { background: #ffd93d; }
+        .legend-color.stock3 { background: #6c5ce7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Portfolio Weight Visualizer</h1>
+        <p class="subtitle">See how stock returns affect your portfolio allocation in real-time</p>
+        
+        <div class="main-content">
+            <div class="controls-panel">
+                <div class="section-title">⚙️ Stock Controls</div>
+                
+                <div class="weight-warning" id="weightWarning">
+                    ⚠️ Weights should sum to 100%
+                </div>
+                
+                <!-- Stock 1: NVDA -->
+                <div class="stock-control">
+                    <div class="stock-header">
+                        <span class="stock-name stock1">NVDA</span>
+                        <div class="weight-input-group">
+                            <label>Initial:</label>
+                            <input type="number" class="weight-input" id="weight1" value="40" min="0" max="100" step="1">
+                            <span>%</span>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Return</span>
+                            <span class="return-value" id="return1Display">0%</span>
+                        </div>
+                        <input type="range" class="slider" id="return1" min="-50" max="50" value="0">
+                    </div>
+                </div>
+                
+                <!-- Stock 2: MU -->
+                <div class="stock-control">
+                    <div class="stock-header">
+                        <span class="stock-name stock2">MU</span>
+                        <div class="weight-input-group">
+                            <label>Initial:</label>
+                            <input type="number" class="weight-input" id="weight2" value="35" min="0" max="100" step="1">
+                            <span>%</span>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Return</span>
+                            <span class="return-value" id="return2Display">0%</span>
+                        </div>
+                        <input type="range" class="slider" id="return2" min="-50" max="50" value="0">
+                    </div>
+                </div>
+                
+                <!-- Stock 3: MSFT -->
+                <div class="stock-control">
+                    <div class="stock-header">
+                        <span class="stock-name stock3">MSFT</span>
+                        <div class="weight-input-group">
+                            <label>Initial:</label>
+                            <input type="number" class="weight-input" id="weight3" value="25" min="0" max="100" step="1">
+                            <span>%</span>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-label">
+                            <span>Return</span>
+                            <span class="return-value" id="return3Display">0%</span>
+                        </div>
+                        <input type="range" class="slider" id="return3" min="-50" max="50" value="0">
+                    </div>
+                </div>
+                
+                <button class="reset-btn" onclick="resetAll()">🔄 Reset All Returns to 0%</button>
+            </div>
+            
+            <div class="visualization-panel">
+                <div class="square-container">
+                    <div class="section-title">📐 Portfolio Allocation</div>
+                    <div class="portfolio-square" id="portfolioSquare">
+                        <!-- Squares will be dynamically generated -->
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color stock1"></div>
+                            <span>NVDA</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color stock2"></div>
+                            <span>MU</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color stock3"></div>
+                            <span>MSFT</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-panel">
+                    <div class="section-title">📈 Weight Changes</div>
+                    <div class="stats-grid">
+                        <div class="stat-card stock1">
+                            <div class="stat-ticker">NVDA</div>
+                            <div class="stat-row">
+                                <span>Initial:</span>
+                                <span class="stat-value" id="stat1Initial">40.0%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>New:</span>
+                                <span class="stat-value" id="stat1New">40.0%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>Change:</span>
+                                <span class="stat-value" id="stat1Change">+0.0%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stock2">
+                            <div class="stat-ticker">MU</div>
+                            <div class="stat-row">
+                                <span>Initial:</span>
+                                <span class="stat-value" id="stat2Initial">35.0%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>New:</span>
+                                <span class="stat-value" id="stat2New">35.0%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>Change:</span>
+                                <span class="stat-value" id="stat2Change">+0.0%</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stock3">
+                            <div class="stat-ticker">MSFT</div>
+                            <div class="stat-row">
+                                <span>Initial:</span>
+                                <span class="stat-value" id="stat3Initial">25.0%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>New:</span>
+                                <span class="stat-value" id="stat3New">25.0%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span>Change:</span>
+                                <span class="stat-value" id="stat3Change">+0.0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="portfolio-return">
+                        <div class="portfolio-return-label">Total Portfolio Return</div>
+                        <div class="portfolio-return-value" id="portfolioReturn">0.0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const stocks = [
+            { id: 1, ticker: 'NVDA', color: '#4ecca3' },
+            { id: 2, ticker: 'MU', color: '#ffd93d' },
+            { id: 3, ticker: 'MSFT', color: '#6c5ce7' }
+        ];
+        
+        function getInputs() {
+            return {
+                weights: [
+                    parseFloat(document.getElementById('weight1').value) || 0,
+                    parseFloat(document.getElementById('weight2').value) || 0,
+                    parseFloat(document.getElementById('weight3').value) || 0
+                ],
+                returns: [
+                    parseFloat(document.getElementById('return1').value) || 0,
+                    parseFloat(document.getElementById('return2').value) || 0,
+                    parseFloat(document.getElementById('return3').value) || 0
+                ]
+            };
+        }
+        
+        function calculateNewWeights(initialWeights, returns) {
+            // Calculate new values after returns
+            const newValues = initialWeights.map((w, i) => w * (1 + returns[i] / 100));
+            const totalValue = newValues.reduce((a, b) => a + b, 0);
+            
+            // Calculate new weights
+            if (totalValue === 0) {
+                return initialWeights.map(() => 0);
+            }
+            return newValues.map(v => (v / totalValue) * 100);
+        }
+        
+        function calculatePortfolioReturn(initialWeights, returns) {
+            const totalInitial = initialWeights.reduce((a, b) => a + b, 0);
+            if (totalInitial === 0) return 0;
+            
+            let portfolioReturn = 0;
+            for (let i = 0; i < initialWeights.length; i++) {
+                portfolioReturn += (initialWeights[i] / totalInitial) * returns[i];
+            }
+            return portfolioReturn;
+        }
+        
+        function updateReturnDisplay(id, value) {
+            const display = document.getElementById(`return${id}Display`);
+            const prefix = value > 0 ? '+' : '';
+            display.textContent = `${prefix}${value}%`;
+            
+            if (value > 0) {
+                display.className = 'return-value positive';
+            } else if (value < 0) {
+                display.className = 'return-value negative';
+            } else {
+                display.className = 'return-value zero';
+            }
+        }
+        
+        function renderTreemap(weights) {
+            const container = document.getElementById('portfolioSquare');
+            const containerSize = container.offsetWidth;
+            
+            // Sort weights with indices for consistent ordering
+            const sortedStocks = weights
+                .map((w, i) => ({ weight: w, index: i, stock: stocks[i] }))
+                .filter(s => s.weight > 0)
+                .sort((a, b) => b.weight - a.weight);
+            
+            if (sortedStocks.length === 0) {
+                container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#888;">No weights set</div>';
+                return;
+            }
+            
+            // Simple treemap layout: divide horizontally first, then vertically
+            container.innerHTML = '';
+            
+            const totalWeight = sortedStocks.reduce((sum, s) => sum + s.weight, 0);
+            
+            if (sortedStocks.length === 1) {
+                // Single stock takes full area
+                const div = createStockDiv(sortedStocks[0], 100, 100);
+                container.appendChild(div);
+            } else if (sortedStocks.length === 2) {
+                // Two stocks: split horizontally based on weight ratio
+                const w1 = (sortedStocks[0].weight / totalWeight) * 100;
+                const w2 = (sortedStocks[1].weight / totalWeight) * 100;
+                
+                const div1 = createStockDiv(sortedStocks[0], w1, 100);
+                const div2 = createStockDiv(sortedStocks[1], w2, 100);
+                
+                container.appendChild(div1);
+                container.appendChild(div2);
+            } else {
+                // Three stocks: largest on left, other two stacked on right
+                const w1 = (sortedStocks[0].weight / totalWeight) * 100;
+                const w2 = (sortedStocks[1].weight / totalWeight) * 100;
+                const w3 = (sortedStocks[2].weight / totalWeight) * 100;
+                
+                // If first stock is dominant (>50%), put it on left
+                if (w1 >= 50) {
+                    const div1 = createStockDiv(sortedStocks[0], w1, 100);
+                    container.appendChild(div1);
+                    
+                    // Create right container for remaining stocks
+                    const rightContainer = document.createElement('div');
+                    rightContainer.style.cssText = `
+                        width: ${100 - w1}%;
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                    `;
+                    
+                    const remainingTotal = w2 + w3;
+                    const h2 = (w2 / remainingTotal) * 100;
+                    const h3 = (w3 / remainingTotal) * 100;
+                    
+                    const div2 = createStockDiv(sortedStocks[1], 100, h2);
+                    const div3 = createStockDiv(sortedStocks[2], 100, h3);
+                    
+                    rightContainer.appendChild(div2);
+                    rightContainer.appendChild(div3);
+                    container.appendChild(rightContainer);
+                } else {
+                    // More balanced: use rows
+                    // Top row: two largest
+                    const topContainer = document.createElement('div');
+                    topContainer.style.cssText = `
+                        width: 100%;
+                        height: ${w1 + w2}%;
+                        display: flex;
+                    `;
+                    
+                    const topTotal = w1 + w2;
+                    const div1 = createStockDiv(sortedStocks[0], (w1 / topTotal) * 100, 100);
+                    const div2 = createStockDiv(sortedStocks[1], (w2 / topTotal) * 100, 100);
+                    
+                    topContainer.appendChild(div1);
+                    topContainer.appendChild(div2);
+                    container.appendChild(topContainer);
+                    
+                    // Bottom row: smallest
+                    const div3 = createStockDiv(sortedStocks[2], 100, w3);
+                    container.appendChild(div3);
+                }
+            }
+        }
+        
+        function createStockDiv(stockData, widthPercent, heightPercent) {
+            const div = document.createElement('div');
+            div.className = `stock-square stock${stockData.index + 1}`;
+            div.style.width = `${widthPercent}%`;
+            div.style.height = `${heightPercent}%`;
+            
+            // Only show label if area is large enough
+            const area = widthPercent * heightPercent / 100;
+            if (area > 10) {
+                div.innerHTML = `
+                    <span class="square-label">${stockData.stock.ticker}</span>
+                    <span class="square-weight">${stockData.weight.toFixed(1)}%</span>
+                `;
+            } else if (area > 3) {
+                div.innerHTML = `<span class="square-weight" style="font-size: 0.9rem;">${stockData.weight.toFixed(0)}%</span>`;
+            }
+            
+            return div;
+        }
+        
+        function updateVisualization() {
+            const { weights, returns } = getInputs();
+            
+            // Check if weights sum to ~100%
+            const weightSum = weights.reduce((a, b) => a + b, 0);
+            const warning = document.getElementById('weightWarning');
+            if (Math.abs(weightSum - 100) > 0.1 && weightSum !== 0) {
+                warning.classList.add('show');
+            } else {
+                warning.classList.remove('show');
+            }
+            
+            // Normalize weights if they don't sum to 100
+            const normalizedWeights = weightSum > 0 
+                ? weights.map(w => (w / weightSum) * 100)
+                : weights;
+            
+            // Calculate new weights after returns
+            const newWeights = calculateNewWeights(normalizedWeights, returns);
+            
+            // Update return displays
+            returns.forEach((r, i) => updateReturnDisplay(i + 1, r));
+            
+            // Update stats
+            for (let i = 0; i < 3; i++) {
+                document.getElementById(`stat${i + 1}Initial`).textContent = `${normalizedWeights[i].toFixed(1)}%`;
+                document.getElementById(`stat${i + 1}New`).textContent = `${newWeights[i].toFixed(1)}%`;
+                
+                const change = newWeights[i] - normalizedWeights[i];
+                const changeEl = document.getElementById(`stat${i + 1}Change`);
+                const prefix = change >= 0 ? '+' : '';
+                changeEl.textContent = `${prefix}${change.toFixed(1)}%`;
+                changeEl.style.color = change > 0 ? '#4ecca3' : change < 0 ? '#ff6b6b' : '#888';
+            }
+            
+            // Calculate and display portfolio return
+            const portfolioReturn = calculatePortfolioReturn(normalizedWeights, returns);
+            const portfolioReturnEl = document.getElementById('portfolioReturn');
+            const prefix = portfolioReturn >= 0 ? '+' : '';
+            portfolioReturnEl.textContent = `${prefix}${portfolioReturn.toFixed(2)}%`;
+            
+            if (portfolioReturn > 0) {
+                portfolioReturnEl.className = 'portfolio-return-value positive';
+            } else if (portfolioReturn < 0) {
+                portfolioReturnEl.className = 'portfolio-return-value negative';
+            } else {
+                portfolioReturnEl.className = 'portfolio-return-value zero';
+            }
+            
+            // Render treemap with new weights
+            renderTreemap(newWeights);
+        }
+        
+        function resetAll() {
+            document.getElementById('return1').value = 0;
+            document.getElementById('return2').value = 0;
+            document.getElementById('return3').value = 0;
+            updateVisualization();
+        }
+        
+        // Event listeners
+        ['weight1', 'weight2', 'weight3', 'return1', 'return2', 'return3'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateVisualization);
+        });
+        
+        // Initial render
+        updateVisualization();
+        
+        // Re-render on window resize
+        window.addEventListener('resize', updateVisualization);
+    </script>
+</body>
+</html>
