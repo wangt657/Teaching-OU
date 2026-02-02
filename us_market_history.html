@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Stock Market: Growth vs. Shrinkage</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #4ecca3, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            color: #aaa;
+            font-size: 1rem;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-card.green { border-top: 3px solid #4ecca3; }
+        .stat-card.red { border-top: 3px solid #ff6b6b; }
+        .stat-card.blue { border-top: 3px solid #45b7d1; }
+        .stat-card.yellow { border-top: 3px solid #ffd93d; }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .stat-card.green .stat-value { color: #4ecca3; }
+        .stat-card.red .stat-value { color: #ff6b6b; }
+        .stat-card.blue .stat-value { color: #45b7d1; }
+        .stat-card.yellow .stat-value { color: #ffd93d; }
+        
+        .stat-change {
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+        
+        .stat-change.positive { color: #4ecca3; }
+        .stat-change.negative { color: #ff6b6b; }
+        
+        .chart-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+        
+        .insight-box {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .insight-title {
+            color: #ffd93d;
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 1.05rem;
+        }
+        
+        .insight-text {
+            color: #ccc;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+        
+        .insight-text strong {
+            color: #fff;
+        }
+        
+        .timeline {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .timeline-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 3px solid #45b7d1;
+        }
+        
+        .timeline-year {
+            color: #45b7d1;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-event {
+            color: #aaa;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        
+        .source {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .legend-custom {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        
+        .legend-color.cap { background: #4ecca3; }
+        .legend-color.count { background: #ff6b6b; }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+            
+            .stat-value {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 The Paradox of the US Stock Market</h1>
+            <p>Market capitalization has grown nearly 90x since 1975, yet the number of publicly listed companies has declined by 50% from its 1996 peak. What's going on?</p>
+        </div>
+        
+        <div class="stats-row">
+            <div class="stat-card green">
+                <div class="stat-label">Market Cap (1975)</div>
+                <div class="stat-value">$0.7T</div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-label">Market Cap (2024)</div>
+                <div class="stat-value">$62.2T</div>
+                <div class="stat-change positive">+8,743% since 1975</div>
+            </div>
+            <div class="stat-card red">
+                <div class="stat-label">Listed Companies (1996 Peak)</div>
+                <div class="stat-value">8,090</div>
+            </div>
+            <div class="stat-card red">
+                <div class="stat-label">Listed Companies (2024)</div>
+                <div class="stat-value">4,010</div>
+                <div class="stat-change negative">-50% from peak</div>
+            </div>
+        </div>
+        
+        <div class="chart-panel">
+            <div class="chart-title">📊 US Stock Market: 1975–2024</div>
+            <div class="legend-custom">
+                <div class="legend-item">
+                    <div class="legend-color cap"></div>
+                    <span>Total Market Cap ($ Trillions) — Left Axis</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color count"></div>
+                    <span>Number of Listed Companies — Right Axis</span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-panel">
+            <div class="chart-title">💰 Average Market Cap Per Listed Company</div>
+            <div class="chart-container" style="height: 300px;">
+                <canvas id="avgChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="insight-box">
+            <div class="insight-title">💡 Key Insights</div>
+            <div class="insight-text">
+                <p><strong>The Shrinking Universe:</strong> The number of US public companies peaked at 8,090 in 1996 and has fallen to ~4,010 by 2024—a decline of about 50%. The drop is attributed to:</p>
+                <ul style="margin: 10px 0 10px 20px;">
+                    <li><strong>Mergers & Acquisitions:</strong> ~95% of delistings were due to companies being acquired</li>
+                    <li><strong>Regulatory burden:</strong> Sarbanes-Oxley (2002) increased compliance costs</li>
+                    <li><strong>Private capital:</strong> Companies can stay private longer with abundant VC/PE funding</li>
+                    <li><strong>Fewer IPOs:</strong> Average ~300/year (1980-2000) dropped to ~100/year after</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>The Concentration Effect:</strong> Fewer companies but massive growth means each surviving company is, on average, much larger. The average market cap per company grew from ~$300M in 1975 to over <strong>$15 billion</strong> in 2024—a 50x increase. The top 10 companies now represent ~38% of the S&P 500.</p>
+            </div>
+        </div>
+        
+        <div class="chart-panel">
+            <div class="chart-title">📅 Key Events in US Market History</div>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-year">1975</div>
+                    <div class="timeline-event">Starting point: ~2,400 companies, $0.7T market cap</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-year">1996</div>
+                    <div class="timeline-event">Peak listings: 8,090 companies during dot-com boom</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-year">2000-01</div>
+                    <div class="timeline-event">Dot-com crash; mass delistings begin</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-year">2002</div>
+                    <div class="timeline-event">Sarbanes-Oxley Act increases regulatory burden</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-year">2008-09</div>
+                    <div class="timeline-event">Financial crisis; market cap drops 50%</div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-year">2024</div>
+                    <div class="timeline-event">~4,010 companies, $62T+ market cap</div>
+                </div>
+            </div>
+        </div>
+        
+        <p class="source">Data sources: World Bank, FRED (Federal Reserve), TheGlobalEconomy.com, Siblis Research. Market cap = all domestically listed companies on NYSE, NASDAQ, and OTCQX.</p>
+    </div>
+    
+    <script>
+        // Historical data (annual, selected years for clarity)
+        const years = [1975, 1980, 1985, 1990, 1995, 1996, 1997, 1998, 1999, 2000, 
+                       2002, 2004, 2006, 2008, 2010, 2012, 2014, 2016, 2018, 2020, 2022, 2024];
+        
+        // Market capitalization in trillions USD
+        const marketCap = [0.70, 1.45, 2.32, 3.09, 6.86, 8.48, 11.31, 13.45, 16.64, 15.10,
+                          11.10, 16.32, 19.43, 11.74, 17.14, 18.67, 26.33, 27.35, 30.44, 40.72, 40.54, 62.19];
+        
+        // Number of listed companies
+        const numCompanies = [2401, 4800, 5600, 6100, 7700, 8090, 8000, 7600, 7200, 6900,
+                             5700, 5200, 5100, 4700, 4300, 4100, 4200, 4300, 4400, 4400, 4200, 4010];
+        
+        // Calculate average market cap per company (in billions)
+        const avgMarketCap = marketCap.map((cap, i) => (cap * 1000) / numCompanies[i]);
+        
+        // Main dual-axis chart
+        const ctx1 = document.getElementById('mainChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: years,
+                datasets: [
+                    {
+                        label: 'Market Cap ($T)',
+                        data: marketCap,
+                        borderColor: '#4ecca3',
+                        backgroundColor: 'rgba(78, 204, 163, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        yAxisID: 'y',
+                        pointRadius: 4,
+                        pointBackgroundColor: '#4ecca3'
+                    },
+                    {
+                        label: 'Listed Companies',
+                        data: numCompanies,
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        yAxisID: 'y1',
+                        pointRadius: 4,
+                        pointBackgroundColor: '#ff6b6b'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                if (context.datasetIndex === 0) {
+                                    return `Market Cap: $${context.raw.toFixed(2)}T`;
+                                } else {
+                                    return `Companies: ${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Market Cap ($ Trillions)',
+                            color: '#4ecca3'
+                        },
+                        grid: {
+                            color: 'rgba(78, 204, 163, 0.1)'
+                        },
+                        ticks: {
+                            color: '#4ecca3',
+                            callback: function(value) {
+                                return '$' + value + 'T';
+                            }
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Number of Companies',
+                            color: '#ff6b6b'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        ticks: {
+                            color: '#ff6b6b',
+                            callback: function(value) {
+                                return value.toLocaleString();
+                            }
+                        },
+                        min: 0,
+                        max: 10000
+                    }
+                }
+            }
+        });
+        
+        // Average market cap chart
+        const ctx2 = document.getElementById('avgChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: years,
+                datasets: [{
+                    label: 'Avg Market Cap per Company ($B)',
+                    data: avgMarketCap,
+                    backgroundColor: years.map(y => y >= 2020 ? '#ffd93d' : 'rgba(255, 217, 61, 0.6)'),
+                    borderColor: '#ffd93d',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        callbacks: {
+                            label: function(context) {
+                                return `Avg: $${context.raw.toFixed(1)} Billion`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#888'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ffd93d',
+                            callback: function(value) {
+                                return '$' + value + 'B';
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Average Market Cap per Company',
+                            color: '#ffd93d'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
