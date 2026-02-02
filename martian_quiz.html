@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Martian Stock Market Quiz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            background: 
+                linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)),
+                url('https://mars.nasa.gov/system/resources/detail_files/26895_PIA25611-web.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            color: #ff6b4a;
+            text-shadow: 0 2px 10px rgba(255, 107, 74, 0.5);
+        }
+        
+        .header h1 span {
+            color: #fff;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        
+        .mars-emoji {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .panel {
+            background: rgba(20, 20, 35, 0.85);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 107, 74, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #ff6b4a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .market-data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .market-data-table th, 
+        .market-data-table td {
+            padding: 12px 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 107, 74, 0.3);
+        }
+        
+        .market-data-table th {
+            background: rgba(255, 107, 74, 0.3);
+            color: #fff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+        
+        .market-data-table td {
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 1.1rem;
+        }
+        
+        .ticker {
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+        
+        .ticker.air { color: #87CEEB; }
+        .ticker.water { color: #4FC3F7; }
+        .ticker.food { color: #81C784; }
+        
+        .market-cap {
+            color: #ffd700;
+            font-weight: 600;
+        }
+        
+        .question-box {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ff6b4a;
+        }
+        
+        .question-number {
+            display: inline-block;
+            background: #ff6b4a;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .question-text {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .question-text strong {
+            color: #ff6b4a;
+        }
+        
+        .answer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .answer-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .answer-input-group label {
+            font-size: 0.9rem;
+            color: #aaa;
+            font-weight: 500;
+        }
+        
+        .answer-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .answer-input-wrapper span {
+            color: #ffd700;
+            font-weight: 600;
+        }
+        
+        .answer-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid rgba(255, 107, 74, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1rem;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        
+        .answer-input:focus {
+            outline: none;
+            border-color: #ff6b4a;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .answer-input.correct {
+            border-color: #4ecca3;
+            background: rgba(78, 204, 163, 0.2);
+        }
+        
+        .answer-input.incorrect {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.2);
+        }
+        
+        .feedback {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        
+        .feedback.correct {
+            display: block;
+            background: rgba(78, 204, 163, 0.2);
+            border: 1px solid #4ecca3;
+            color: #4ecca3;
+        }
+        
+        .feedback.incorrect {
+            display: block;
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+        }
+        
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b4a 0%, #ee5a3a 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 74, 0.3);
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(255, 107, 74, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #4ecca3 0%, #3db892 100%);
+            color: white;
+        }
+        
+        .solution-box {
+            margin-top: 15px;
+            padding: 20px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .solution-box.show {
+            display: block;
+        }
+        
+        .solution-title {
+            color: #ffd700;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .solution-steps {
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+        
+        .solution-steps .step {
+            margin-bottom: 10px;
+            padding-left: 15px;
+            border-left: 2px solid rgba(255, 215, 0, 0.5);
+        }
+        
+        .solution-steps .formula {
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #4FC3F7;
+        }
+        
+        .solution-steps .result {
+            color: #4ecca3;
+            font-weight: 600;
+        }
+        
+        .score-panel {
+            background: rgba(255, 215, 0, 0.15);
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .score-label {
+            font-size: 1rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        
+        .score-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffd700;
+        }
+        
+        .score-details {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        
+        .tolerance-note {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        .concept-box {
+            background: rgba(79, 195, 247, 0.1);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .concept-box h4 {
+            color: #4FC3F7;
+            margin-bottom: 10px;
+        }
+        
+        .concept-box p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #ccc;
+        }
+        
+        .concept-box .formula-display {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            color: #ffd700;
+            text-align: center;
+        }
+        
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            
+            .answer-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-row {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="mars-emoji">🔴🚀</div>
+            <h1>The <span>Martian</span> Stock Market Quiz</h1>
+            <p>Welcome to the Mars Stock Exchange! Test your understanding of value-weighted portfolios and market portfolios using the three essential Martian companies.</p>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-title">📊 Mars Stock Exchange — Current Market Data</div>
+            
+            <table class="market-data-table">
+                <thead>
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Company</th>
+                        <th>Market Capitalization</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="ticker air">AIR</span></td>
+                        <td>Mars Atmospheric Corp.</td>
+                        <td class="market-cap" id="capAir">—</td>
+                    </tr>
+                    <tr>
+                        <td><span class="ticker water">WATER</span></td>
+                        <td>Polar Ice Mining Ltd.</td>
+                        <td class="market-cap" id="capWater">—</td>
+                    </tr>
+                    <tr>
+                        <td><span class="ticker food">FOOD</span></td>
+                        <td>Red Planet Agriculture Inc.</td>
+                        <td class="market-cap" id="capFood">—</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="btn-row" style="justify-content: center;">
+                <button class="btn btn-primary" onclick="generateNewProblem()">🎲 Generate New Problem</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-title">📚 Key Concepts</div>
+            
+            <div class="concept-box">
+                <h4>Value-Weighted Portfolio</h4>
+                <p>In a value-weighted portfolio, each stock's weight is proportional to its market capitalization relative to the total market cap of <strong>all stocks in that portfolio</strong>.</p>
+                <div class="formula-display">
+                    Weight<sub>i</sub> = MarketCap<sub>i</sub> / Σ MarketCap<sub>portfolio stocks</sub>
+                </div>
+            </div>
+            
+            <div class="concept-box">
+                <h4>Market Portfolio</h4>
+                <p>The market portfolio includes <strong>all available stocks</strong> in the market, weighted by their market capitalizations. It represents the entire investable market.</p>
+                <div class="formula-display">
+                    Weight<sub>i</sub> = MarketCap<sub>i</sub> / Σ MarketCap<sub>all stocks</sub>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel" id="quizPanel" style="display: none;">
+            <div class="panel-title">✏️ Quiz Questions</div>
+            
+            <!-- Question 1 -->
+            <div class="question-box">
+                <div class="question-number">Question 1</div>
+                <div class="question-text">
+                    You want to invest <strong>$1,000,000</strong> in a <strong>value-weighted portfolio</strong> consisting of only <span class="ticker water">WATER</span> and <span class="ticker food">FOOD</span> stocks.
+                    <br><br>
+                    Calculate the dollar amount you should invest in each company.
+                </div>
+                
+                <div class="answer-grid">
+                    <div class="answer-input-group">
+                        <label>Investment in <span class="ticker water">WATER</span></label>
+                        <div class="answer-input-wrapper">
+                            <span>$</span>
+                            <input type="number" class="answer-input" id="q1Water" placeholder="Enter amount">
+                        </div>
+                    </div>
+                    <div class="answer-input-group">
+                        <label>Investment in <span class="ticker food">FOOD</span></label>
+                        <div class="answer-input-wrapper">
+                            <span>$</span>
+                            <input type="number" class="answer-input" id="q1Food" placeholder="Enter amount">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-row">
+                    <button class="btn btn-success" onclick="checkAnswer(1)">✓ Check Answer</button>
+                    <button class="btn btn-secondary" onclick="showSolution(1)">💡 Show Solution</button>
+                </div>
+                
+                <div class="feedback" id="feedback1"></div>
+                
+                <div class="solution-box" id="solution1">
+                    <div class="solution-title">💡 Solution</div>
+                    <div class="solution-steps" id="solutionSteps1"></div>
+                </div>
+                
+                <p class="tolerance-note">* Answers within $100 of the correct value will be accepted.</p>
+            </div>
+            
+            <!-- Question 2 -->
+            <div class="question-box">
+                <div class="question-number">Question 2</div>
+                <div class="question-text">
+                    You want to invest <strong>$1,000,000</strong> in the <strong>market portfolio</strong> on Mars (which includes all three stocks: <span class="ticker air">AIR</span>, <span class="ticker water">WATER</span>, and <span class="ticker food">FOOD</span>).
+                    <br><br>
+                    Calculate the dollar amount you should invest in each company.
+                </div>
+                
+                <div class="answer-grid">
+                    <div class="answer-input-group">
+                        <label>Investment in <span class="ticker air">AIR</span></label>
+                        <div class="answer-input-wrapper">
+                            <span>$</span>
+                            <input type="number" class="answer-input" id="q2Air" placeholder="Enter amount">
+                        </div>
+                    </div>
+                    <div class="answer-input-group">
+                        <label>Investment in <span class="ticker water">WATER</span></label>
+                        <div class="answer-input-wrapper">
+                            <span>$</span>
+                            <input type="number" class="answer-input" id="q2Water" placeholder="Enter amount">
+                        </div>
+                    </div>
+                    <div class="answer-input-group">
+                        <label>Investment in <span class="ticker food">FOOD</span></label>
+                        <div class="answer-input-wrapper">
+                            <span>$</span>
+                            <input type="number" class="answer-input" id="q2Food" placeholder="Enter amount">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="btn-row">
+                    <button class="btn btn-success" onclick="checkAnswer(2)">✓ Check Answer</button>
+                    <button class="btn btn-secondary" onclick="showSolution(2)">💡 Show Solution</button>
+                </div>
+                
+                <div class="feedback" id="feedback2"></div>
+                
+                <div class="solution-box" id="solution2">
+                    <div class="solution-title">💡 Solution</div>
+                    <div class="solution-steps" id="solutionSteps2"></div>
+                </div>
+                
+                <p class="tolerance-note">* Answers within $100 of the correct value will be accepted.</p>
+            </div>
+            
+            <!-- Score Panel -->
+            <div class="score-panel" id="scorePanel" style="display: none;">
+                <div class="score-label">Your Score</div>
+                <div class="score-value" id="scoreValue">0 / 2</div>
+                <div class="score-details" id="scoreDetails"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Market data storage
+        let marketData = {
+            air: 0,
+            water: 0,
+            food: 0
+        };
+        
+        // Correct answers storage
+        let correctAnswers = {
+            q1Water: 0,
+            q1Food: 0,
+            q2Air: 0,
+            q2Water: 0,
+            q2Food: 0
+        };
+        
+        // Score tracking
+        let answeredCorrectly = {
+            q1: false,
+            q2: false
+        };
+        
+        // Generate random number from uniform distribution [min, max]
+        function randomUniform(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+        
+        // Format number as trillions
+        function formatTrillions(num) {
+            return num.toFixed(2) + ' Trillion';
+        }
+        
+        // Format number as currency
+        function formatCurrency(num) {
+            return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+        }
+        
+        // Generate new problem
+        function generateNewProblem() {
+            // Generate random market caps between 1 and 10 trillion
+            // Round to 2 decimal places so displayed math is accurate
+            marketData.air = Math.round(randomUniform(1, 10) * 100) / 100;
+            marketData.water = Math.round(randomUniform(1, 10) * 100) / 100;
+            marketData.food = Math.round(randomUniform(1, 10) * 100) / 100;
+            
+            // Update display
+            document.getElementById('capAir').textContent = '$' + formatTrillions(marketData.air);
+            document.getElementById('capWater').textContent = '$' + formatTrillions(marketData.water);
+            document.getElementById('capFood').textContent = '$' + formatTrillions(marketData.food);
+            
+            // Calculate correct answers
+            const investment = 1000000;
+            
+            // Q1: Value-weighted portfolio of WATER and FOOD only
+            const totalQ1 = marketData.water + marketData.food;
+            const weightWaterQ1 = marketData.water / totalQ1;
+            const weightFoodQ1 = marketData.food / totalQ1;
+            correctAnswers.q1Water = weightWaterQ1 * investment;
+            correctAnswers.q1Food = weightFoodQ1 * investment;
+            
+            // Q2: Market portfolio (all three stocks)
+            const totalQ2 = marketData.air + marketData.water + marketData.food;
+            const weightAirQ2 = marketData.air / totalQ2;
+            const weightWaterQ2 = marketData.water / totalQ2;
+            const weightFoodQ2 = marketData.food / totalQ2;
+            correctAnswers.q2Air = weightAirQ2 * investment;
+            correctAnswers.q2Water = weightWaterQ2 * investment;
+            correctAnswers.q2Food = weightFoodQ2 * investment;
+            
+            // Reset UI
+            resetQuiz();
+            
+            // Show quiz panel
+            document.getElementById('quizPanel').style.display = 'block';
+        }
+        
+        // Reset quiz state
+        function resetQuiz() {
+            // Clear inputs
+            ['q1Water', 'q1Food', 'q2Air', 'q2Water', 'q2Food'].forEach(id => {
+                const input = document.getElementById(id);
+                input.value = '';
+                input.className = 'answer-input';
+            });
+            
+            // Hide feedbacks and solutions
+            ['feedback1', 'feedback2'].forEach(id => {
+                const el = document.getElementById(id);
+                el.className = 'feedback';
+                el.textContent = '';
+            });
+            
+            ['solution1', 'solution2'].forEach(id => {
+                document.getElementById(id).classList.remove('show');
+            });
+            
+            // Reset score tracking
+            answeredCorrectly = { q1: false, q2: false };
+            document.getElementById('scorePanel').style.display = 'none';
+        }
+        
+        // Check answer
+        function checkAnswer(questionNum) {
+            const tolerance = 100; // Accept answers within $100
+            let allCorrect = true;
+            let feedback = '';
+            
+            if (questionNum === 1) {
+                const waterAnswer = parseFloat(document.getElementById('q1Water').value) || 0;
+                const foodAnswer = parseFloat(document.getElementById('q1Food').value) || 0;
+                
+                const waterCorrect = Math.abs(waterAnswer - correctAnswers.q1Water) <= tolerance;
+                const foodCorrect = Math.abs(foodAnswer - correctAnswers.q1Food) <= tolerance;
+                
+                document.getElementById('q1Water').className = 'answer-input ' + (waterCorrect ? 'correct' : 'incorrect');
+                document.getElementById('q1Food').className = 'answer-input ' + (foodCorrect ? 'correct' : 'incorrect');
+                
+                allCorrect = waterCorrect && foodCorrect;
+                
+                if (allCorrect) {
+                    feedback = '✓ Correct! You understand how to construct a value-weighted portfolio with a subset of stocks.';
+                    answeredCorrectly.q1 = true;
+                } else {
+                    feedback = '✗ Not quite. Remember: weight = stock market cap ÷ total market cap of WATER and FOOD only.';
+                }
+            } else {
+                const airAnswer = parseFloat(document.getElementById('q2Air').value) || 0;
+                const waterAnswer = parseFloat(document.getElementById('q2Water').value) || 0;
+                const foodAnswer = parseFloat(document.getElementById('q2Food').value) || 0;
+                
+                const airCorrect = Math.abs(airAnswer - correctAnswers.q2Air) <= tolerance;
+                const waterCorrect = Math.abs(waterAnswer - correctAnswers.q2Water) <= tolerance;
+                const foodCorrect = Math.abs(foodAnswer - correctAnswers.q2Food) <= tolerance;
+                
+                document.getElementById('q2Air').className = 'answer-input ' + (airCorrect ? 'correct' : 'incorrect');
+                document.getElementById('q2Water').className = 'answer-input ' + (waterCorrect ? 'correct' : 'incorrect');
+                document.getElementById('q2Food').className = 'answer-input ' + (foodCorrect ? 'correct' : 'incorrect');
+                
+                allCorrect = airCorrect && waterCorrect && foodCorrect;
+                
+                if (allCorrect) {
+                    feedback = '✓ Correct! You understand the market portfolio concept.';
+                    answeredCorrectly.q2 = true;
+                } else {
+                    feedback = '✗ Not quite. Remember: the market portfolio includes ALL stocks, weighted by their market caps.';
+                }
+            }
+            
+            const feedbackEl = document.getElementById('feedback' + questionNum);
+            feedbackEl.textContent = feedback;
+            feedbackEl.className = 'feedback ' + (allCorrect ? 'correct' : 'incorrect');
+            
+            updateScore();
+        }
+        
+        // Show solution
+        function showSolution(questionNum) {
+            const solutionBox = document.getElementById('solution' + questionNum);
+            const stepsEl = document.getElementById('solutionSteps' + questionNum);
+            
+            if (questionNum === 1) {
+                const totalCap = marketData.water + marketData.food;
+                const weightWater = (marketData.water / totalCap * 100).toFixed(2);
+                const weightFood = (marketData.food / totalCap * 100).toFixed(2);
+                
+                stepsEl.innerHTML = `
+                    <div class="step">
+                        <strong>Step 1:</strong> Calculate total market cap of portfolio stocks<br>
+                        <span class="formula">Total = WATER + FOOD = ${marketData.water.toFixed(2)}T + ${marketData.food.toFixed(2)}T = ${totalCap.toFixed(2)}T</span>
+                    </div>
+                    <div class="step">
+                        <strong>Step 2:</strong> Calculate weights<br>
+                        <span class="formula">Weight_WATER = ${marketData.water.toFixed(2)}T ÷ ${totalCap.toFixed(2)}T = ${weightWater}%</span><br>
+                        <span class="formula">Weight_FOOD = ${marketData.food.toFixed(2)}T ÷ ${totalCap.toFixed(2)}T = ${weightFood}%</span>
+                    </div>
+                    <div class="step">
+                        <strong>Step 3:</strong> Calculate dollar amounts<br>
+                        <span class="formula">WATER = ${weightWater}% × $1,000,000 = </span><span class="result">$${formatCurrency(correctAnswers.q1Water)}</span><br>
+                        <span class="formula">FOOD = ${weightFood}% × $1,000,000 = </span><span class="result">$${formatCurrency(correctAnswers.q1Food)}</span>
+                    </div>
+                `;
+            } else {
+                const totalCap = marketData.air + marketData.water + marketData.food;
+                const weightAir = (marketData.air / totalCap * 100).toFixed(2);
+                const weightWater = (marketData.water / totalCap * 100).toFixed(2);
+                const weightFood = (marketData.food / totalCap * 100).toFixed(2);
+                
+                stepsEl.innerHTML = `
+                    <div class="step">
+                        <strong>Step 1:</strong> Calculate total market cap of ALL stocks<br>
+                        <span class="formula">Total = AIR + WATER + FOOD = ${marketData.air.toFixed(2)}T + ${marketData.water.toFixed(2)}T + ${marketData.food.toFixed(2)}T = ${totalCap.toFixed(2)}T</span>
+                    </div>
+                    <div class="step">
+                        <strong>Step 2:</strong> Calculate weights<br>
+                        <span class="formula">Weight_AIR = ${marketData.air.toFixed(2)}T ÷ ${totalCap.toFixed(2)}T = ${weightAir}%</span><br>
+                        <span class="formula">Weight_WATER = ${marketData.water.toFixed(2)}T ÷ ${totalCap.toFixed(2)}T = ${weightWater}%</span><br>
+                        <span class="formula">Weight_FOOD = ${marketData.food.toFixed(2)}T ÷ ${totalCap.toFixed(2)}T = ${weightFood}%</span>
+                    </div>
+                    <div class="step">
+                        <strong>Step 3:</strong> Calculate dollar amounts<br>
+                        <span class="formula">AIR = ${weightAir}% × $1,000,000 = </span><span class="result">$${formatCurrency(correctAnswers.q2Air)}</span><br>
+                        <span class="formula">WATER = ${weightWater}% × $1,000,000 = </span><span class="result">$${formatCurrency(correctAnswers.q2Water)}</span><br>
+                        <span class="formula">FOOD = ${weightFood}% × $1,000,000 = </span><span class="result">$${formatCurrency(correctAnswers.q2Food)}</span>
+                    </div>
+                `;
+            }
+            
+            solutionBox.classList.add('show');
+        }
+        
+        // Update score display
+        function updateScore() {
+            const correct = (answeredCorrectly.q1 ? 1 : 0) + (answeredCorrectly.q2 ? 1 : 0);
+            
+            document.getElementById('scorePanel').style.display = 'block';
+            document.getElementById('scoreValue').textContent = correct + ' / 2';
+            
+            let details = '';
+            if (correct === 2) {
+                details = '🎉 Perfect! You have mastered value-weighted portfolios!';
+            } else if (correct === 1) {
+                details = '👍 Good progress! Review the solution for the incorrect question.';
+            } else {
+                details = '📚 Keep practicing! Review the solutions and try again.';
+            }
+            document.getElementById('scoreDetails').textContent = details;
+        }
+        
+        // Generate initial problem on page load
+        window.onload = function() {
+            generateNewProblem();
+        };
+    </script>
+</body>
+</html>
