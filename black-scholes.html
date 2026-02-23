@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Black-Scholes Option Pricing Model</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --accent-glow: rgba(88,166,255,0.15);
+    --call-color: #3fb950;
+    --put-color: #f97583;
+    --highlight: #ffd700;
+    --highlight-glow: rgba(255,215,0,0.35);
+    --chart-line: rgba(88,166,255,0.9);
+    --chart-fill: rgba(88,166,255,0.08);
+    --grid: rgba(48,54,61,0.6);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  header {
+    padding: 2.5rem 2rem 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(88,166,255,0.04) 0%, transparent 100%);
+  }
+
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.3rem;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  header p {
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    font-style: italic;
+  }
+
+  .formula-bar {
+    text-align: center;
+    padding: 1.2rem 1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .formula-bar .call-label { color: var(--call-color); font-weight: 500; }
+  .formula-bar .sym { color: var(--accent); }
+
+  .container {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 1.5rem;
+  }
+
+  /* INPUTS PANEL */
+  .inputs-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: sticky;
+    top: 1.5rem;
+    height: fit-content;
+  }
+
+  .inputs-panel h2 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 1.2rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .option-type-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.4rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .option-type-toggle button {
+    flex: 1;
+    padding: 0.65rem;
+    border: none;
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .option-type-toggle button.active-call {
+    background: rgba(63,185,80,0.15);
+    color: var(--call-color);
+    box-shadow: inset 0 -2px 0 var(--call-color);
+  }
+
+  .option-type-toggle button.active-put {
+    background: rgba(249,117,131,0.15);
+    color: var(--put-color);
+    box-shadow: inset 0 -2px 0 var(--put-color);
+  }
+
+  .input-group {
+    margin-bottom: 1.1rem;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-bottom: 0.35rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.03em;
+  }
+
+  .input-group input {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+
+  .input-group input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+  }
+
+  .result-box {
+    margin-top: 1.5rem;
+    padding: 1.2rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .result-box .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 0.4rem;
+  }
+
+  .result-box .price {
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    transition: color 0.3s;
+  }
+
+  .result-box .price.call-price { color: var(--call-color); }
+  .result-box .price.put-price { color: var(--put-color); }
+
+  .greeks-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+
+  .greek-item {
+    background: var(--surface2);
+    padding: 0.5rem 0.7rem;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .greek-item .greek-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .greek-item .greek-value {
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+  }
+
+  /* CHARTS PANEL */
+  .charts-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem 1.5rem 1rem;
+  }
+
+  .chart-card h3 {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 0.8rem;
+  }
+
+  .chart-card h3 span {
+    color: var(--accent);
+  }
+
+  .chart-wrapper {
+    position: relative;
+    height: 240px;
+  }
+
+  @media (max-width: 900px) {
+    .container {
+      grid-template-columns: 1fr;
+    }
+    .inputs-panel {
+      position: static;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>The <span>Black-Scholes</span> Model</h1>
+  <p>Interactive European Option Pricing &amp; Sensitivity Analysis</p>
+</header>
+
+<div class="formula-bar">
+  <span class="call-label">C</span> = S₀ · <span class="sym">N</span>(d₁) − K · e<sup>−rT</sup> · <span class="sym">N</span>(d₂)&nbsp;&nbsp;&nbsp;where&nbsp;&nbsp;&nbsp;d₁ = [ln(S₀/K) + (r + σ²/2)T] / (σ√T)&nbsp;&nbsp;&nbsp;&nbsp;d₂ = d₁ − σ√T
+</div>
+
+<div class="container">
+  <!-- LEFT: INPUTS -->
+  <div class="inputs-panel">
+    <h2>Model Parameters</h2>
+
+    <div class="option-type-toggle">
+      <button id="btn-call" class="active-call" onclick="setType('call')">CALL</button>
+      <button id="btn-put" onclick="setType('put')">PUT</button>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Stock Price ($)</label>
+        <input type="number" id="stockPrice" value="100" step="1" min="0.01">
+      </div>
+      <div class="input-group">
+        <label>Strike Price ($)</label>
+        <input type="number" id="strikePrice" value="100" step="1" min="0.01">
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Trade Date</label>
+        <input type="date" id="tradeDate">
+      </div>
+      <div class="input-group">
+        <label>Expiration Date</label>
+        <input type="date" id="expirationDate">
+      </div>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Volatility (σ %)</label>
+        <input type="number" id="volatility" value="25" step="1" min="0.1" max="200">
+      </div>
+      <div class="input-group">
+        <label>Risk-Free Rate (%)</label>
+        <input type="number" id="riskFreeRate" value="5" step="0.1" min="0" max="50">
+      </div>
+    </div>
+
+    <div class="result-box">
+      <div class="label">Option Price</div>
+      <div class="price call-price" id="optionPrice">—</div>
+    </div>
+
+    <div class="greeks-grid">
+      <div class="greek-item">
+        <div class="greek-label">Delta (Δ)</div>
+        <div class="greek-value" id="gDelta">—</div>
+      </div>
+      <div class="greek-item">
+        <div class="greek-label">Gamma (Γ)</div>
+        <div class="greek-value" id="gGamma">—</div>
+      </div>
+      <div class="greek-item">
+        <div class="greek-label">Theta (Θ)</div>
+        <div class="greek-value" id="gTheta">—</div>
+      </div>
+      <div class="greek-item">
+        <div class="greek-label">Vega (ν)</div>
+        <div class="greek-value" id="gVega">—</div>
+      </div>
+      <div class="greek-item">
+        <div class="greek-label">Rho (ρ)</div>
+        <div class="greek-value" id="gRho">—</div>
+      </div>
+      <div class="greek-item">
+        <div class="greek-label">Days to Exp</div>
+        <div class="greek-value" id="gDTE">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: CHARTS -->
+  <div class="charts-panel">
+    <div class="chart-card">
+      <h3>Option Price vs. <span>Stock Price</span></h3>
+      <div class="chart-wrapper">
+        <canvas id="chartStock"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Option Price vs. <span>Volatility</span></h3>
+      <div class="chart-wrapper">
+        <canvas id="chartVol"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Option Price vs. <span>Days to Maturity</span></h3>
+      <div class="chart-wrapper">
+        <canvas id="chartDTE"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Black-Scholes Math ──────────────────────────────────
+function normCDF(x) {
+  const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x) / Math.SQRT2;
+  const t = 1.0 / (1.0 + p * x);
+  const y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t * Math.exp(-x*x);
+  return 0.5 * (1.0 + sign * y);
+}
+
+function normPDF(x) {
+  return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+}
+
+function bsPrice(S, K, T, r, sigma, type) {
+  if (T <= 0) {
+    return type === 'call' ? Math.max(S - K, 0) : Math.max(K - S, 0);
+  }
+  const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.sqrt(T));
+  const d2 = d1 - sigma * Math.sqrt(T);
+  if (type === 'call') {
+    return S * normCDF(d1) - K * Math.exp(-r * T) * normCDF(d2);
+  } else {
+    return K * Math.exp(-r * T) * normCDF(-d2) - S * normCDF(-d1);
+  }
+}
+
+function bsGreeks(S, K, T, r, sigma, type) {
+  if (T <= 1e-10) {
+    return { delta: type==='call' ? (S>K?1:0) : (S<K?-1:0), gamma:0, theta:0, vega:0, rho:0 };
+  }
+  const sqrtT = Math.sqrt(T);
+  const d1 = (Math.log(S/K) + (r + 0.5*sigma*sigma)*T) / (sigma*sqrtT);
+  const d2 = d1 - sigma*sqrtT;
+  const nd1 = normPDF(d1);
+  const gamma = nd1 / (S * sigma * sqrtT);
+  const vega = S * nd1 * sqrtT / 100;  // per 1% move
+  if (type === 'call') {
+    const delta = normCDF(d1);
+    const theta = (-(S*nd1*sigma)/(2*sqrtT) - r*K*Math.exp(-r*T)*normCDF(d2)) / 365;
+    const rho = K * T * Math.exp(-r*T) * normCDF(d2) / 100;
+    return { delta, gamma, theta, vega, rho };
+  } else {
+    const delta = normCDF(d1) - 1;
+    const theta = (-(S*nd1*sigma)/(2*sqrtT) + r*K*Math.exp(-r*T)*normCDF(-d2)) / 365;
+    const rho = -K * T * Math.exp(-r*T) * normCDF(-d2) / 100;
+    return { delta, gamma, theta, vega, rho };
+  }
+}
+
+// ── State ───────────────────────────────────────────────
+let optionType = 'call';
+let charts = {};
+
+function setType(type) {
+  optionType = type;
+  document.getElementById('btn-call').className = type==='call' ? 'active-call' : '';
+  document.getElementById('btn-put').className = type==='put' ? 'active-put' : '';
+  const priceEl = document.getElementById('optionPrice');
+  priceEl.className = 'price ' + (type==='call' ? 'call-price' : 'put-price');
+  recalculate();
+}
+
+function getInputs() {
+  const S = parseFloat(document.getElementById('stockPrice').value);
+  const K = parseFloat(document.getElementById('strikePrice').value);
+  const sigma = parseFloat(document.getElementById('volatility').value) / 100;
+  const r = parseFloat(document.getElementById('riskFreeRate').value) / 100;
+  const td = document.getElementById('tradeDate').value;
+  const ed = document.getElementById('expirationDate').value;
+  const tradeDate = new Date(td + 'T00:00:00');
+  const expDate = new Date(ed + 'T00:00:00');
+  const diffMs = expDate - tradeDate;
+  const DTE = Math.max(diffMs / (1000*60*60*24), 0);
+  const T = DTE / 365;
+  return { S, K, T, r, sigma, DTE };
+}
+
+// ── Charts ──────────────────────────────────────────────
+const accentRGB = '88,166,255';
+const highlightColor = '#ffd700';
+
+function makeChartConfig(labels, data, xLabel, currentX, currentY) {
+  // Build point radii and colors for highlight
+  const pointRadius = labels.map(l => {
+    const lNum = parseFloat(l);
+    return Math.abs(lNum - currentX) < (labels.length > 1 ? Math.abs(parseFloat(labels[1]) - parseFloat(labels[0])) * 0.6 : 0.01) ? 7 : 0;
+  });
+  const pointBg = labels.map(l => {
+    const lNum = parseFloat(l);
+    return Math.abs(lNum - currentX) < (labels.length > 1 ? Math.abs(parseFloat(labels[1]) - parseFloat(labels[0])) * 0.6 : 0.01) ? highlightColor : `rgba(${accentRGB},0.9)`;
+  });
+  const pointBorder = pointBg.map(c => c === highlightColor ? '#fff' : `rgba(${accentRGB},0.9)`);
+
+  return {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor: `rgba(${accentRGB},0.9)`,
+        backgroundColor: (ctx) => {
+          const chart = ctx.chart;
+          const {ctx: c, chartArea} = chart;
+          if (!chartArea) return `rgba(${accentRGB},0.08)`;
+          const gradient = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          gradient.addColorStop(0, `rgba(${accentRGB},0.18)`);
+          gradient.addColorStop(1, `rgba(${accentRGB},0.0)`);
+          return gradient;
+        },
+        fill: true,
+        borderWidth: 2.5,
+        tension: 0.35,
+        pointRadius,
+        pointBackgroundColor: pointBg,
+        pointBorderColor: pointBorder,
+        pointBorderWidth: 2,
+        pointHoverRadius: 9,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 350 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1c2333',
+          titleColor: '#e6edf3',
+          bodyColor: '#e6edf3',
+          borderColor: '#30363d',
+          borderWidth: 1,
+          cornerRadius: 6,
+          titleFont: { family: 'DM Mono', size: 11 },
+          bodyFont: { family: 'DM Mono', size: 12 },
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            title: (items) => `${xLabel}: ${items[0].label}`,
+            label: (item) => `Price: $${parseFloat(item.raw).toFixed(2)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: xLabel, color: '#8b949e', font: { family: 'DM Mono', size: 11 } },
+          ticks: { color: '#8b949e', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10 },
+          grid: { color: 'rgba(48,54,61,0.4)', drawTicks: false },
+          border: { color: '#30363d' }
+        },
+        y: {
+          title: { display: true, text: 'Option Price ($)', color: '#8b949e', font: { family: 'DM Mono', size: 11 } },
+          ticks: { color: '#8b949e', font: { family: 'DM Mono', size: 10 }, callback: v => '$' + v.toFixed(1) },
+          grid: { color: 'rgba(48,54,61,0.4)', drawTicks: false },
+          border: { color: '#30363d' },
+          beginAtZero: true
+        }
+      },
+      interaction: { intersect: false, mode: 'index' }
+    }
+  };
+}
+
+function findClosestIndex(labels, value) {
+  let best = 0, bestDiff = Infinity;
+  labels.forEach((l, i) => {
+    const diff = Math.abs(parseFloat(l) - value);
+    if (diff < bestDiff) { bestDiff = diff; best = i; }
+  });
+  return best;
+}
+
+function updateCharts(S, K, T, r, sigma, DTE) {
+  // 1) Price vs Stock Price
+  const sMin = Math.max(S * 0.5, 1), sMax = S * 1.5;
+  const sStep = (sMax - sMin) / 80;
+  const sLabels = [], sData = [];
+  for (let s = sMin; s <= sMax; s += sStep) {
+    sLabels.push(s.toFixed(1));
+    sData.push(bsPrice(s, K, T, r, sigma, optionType));
+  }
+
+  // 2) Price vs Volatility
+  const vMin = 0.05, vMax = 1.0;
+  const vStep = (vMax - vMin) / 80;
+  const vLabels = [], vData = [];
+  for (let v = vMin; v <= vMax; v += vStep) {
+    vLabels.push((v * 100).toFixed(1));
+    vData.push(bsPrice(S, K, T, r, v, optionType));
+  }
+
+  // 3) Price vs DTE
+  const dMax = Math.max(DTE, 30);
+  const dStep = Math.max(dMax / 80, 1);
+  const dLabels = [], dData = [];
+  for (let d = dMax; d >= 0; d -= dStep) {
+    dLabels.push(d.toFixed(0));
+    dData.push(bsPrice(S, K, d / 365, r, sigma, optionType));
+  }
+  dLabels.reverse(); dData.reverse();
+
+  // Destroy & recreate
+  ['chartStock','chartVol','chartDTE'].forEach(id => { if (charts[id]) charts[id].destroy(); });
+
+  charts.chartStock = new Chart(document.getElementById('chartStock'), makeChartConfig(sLabels, sData, 'Stock Price ($)', S, bsPrice(S,K,T,r,sigma,optionType)));
+  charts.chartVol = new Chart(document.getElementById('chartVol'), makeChartConfig(vLabels, vData, 'Volatility (%)', sigma*100, bsPrice(S,K,T,r,sigma,optionType)));
+  charts.chartDTE = new Chart(document.getElementById('chartDTE'), makeChartConfig(dLabels, dData, 'Days to Maturity', DTE, bsPrice(S,K,T,r,sigma,optionType)));
+}
+
+// ── Main recalculate ────────────────────────────────────
+function recalculate() {
+  const { S, K, T, r, sigma, DTE } = getInputs();
+  if (isNaN(S) || isNaN(K) || isNaN(sigma) || isNaN(r) || isNaN(T)) return;
+
+  const price = bsPrice(S, K, T, r, sigma, optionType);
+  document.getElementById('optionPrice').textContent = '$' + price.toFixed(2);
+
+  const g = bsGreeks(S, K, T, r, sigma, optionType);
+  document.getElementById('gDelta').textContent = g.delta.toFixed(4);
+  document.getElementById('gGamma').textContent = g.gamma.toFixed(4);
+  document.getElementById('gTheta').textContent = g.theta.toFixed(4);
+  document.getElementById('gVega').textContent = g.vega.toFixed(4);
+  document.getElementById('gRho').textContent = g.rho.toFixed(4);
+  document.getElementById('gDTE').textContent = Math.round(DTE);
+
+  updateCharts(S, K, T, r, sigma, DTE);
+}
+
+// ── Init ────────────────────────────────────────────────
+function init() {
+  const today = new Date();
+  const exp = new Date(today);
+  exp.setMonth(exp.getMonth() + 3);
+  document.getElementById('tradeDate').value = today.toISOString().split('T')[0];
+  document.getElementById('expirationDate').value = exp.toISOString().split('T')[0];
+
+  // Attach listeners
+  document.querySelectorAll('.inputs-panel input').forEach(el => {
+    el.addEventListener('input', recalculate);
+    el.addEventListener('change', recalculate);
+  });
+
+  recalculate();
+}
+
+init();
+</script>
+</body>
+</html>
