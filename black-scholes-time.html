@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Black-Scholes – Path Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --accent-glow: rgba(88,166,255,0.15);
+    --call-color: #3fb950;
+    --put-color: #f97583;
+    --stock-color: #d2a8ff;
+    --stock-glow: rgba(210,168,255,0.15);
+    --highlight: #ffd700;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  header {
+    padding: 2.2rem 2rem 1.3rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(210,168,255,0.04) 0%, transparent 100%);
+  }
+
+  header h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+  }
+
+  header h1 span { color: var(--stock-color); }
+
+  header p {
+    color: var(--text-dim);
+    font-size: 0.92rem;
+    font-style: italic;
+  }
+
+  .container {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 1.5rem;
+  }
+
+  /* ── INPUTS PANEL ── */
+  .inputs-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem;
+    position: sticky;
+    top: 1.5rem;
+    height: fit-content;
+  }
+
+  .inputs-panel h2 {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .option-type-toggle {
+    display: flex;
+    margin-bottom: 1.2rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .option-type-toggle button {
+    flex: 1;
+    padding: 0.6rem;
+    border: none;
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .option-type-toggle button.active-call {
+    background: rgba(63,185,80,0.15);
+    color: var(--call-color);
+    box-shadow: inset 0 -2px 0 var(--call-color);
+  }
+
+  .option-type-toggle button.active-put {
+    background: rgba(249,117,131,0.15);
+    color: var(--put-color);
+    box-shadow: inset 0 -2px 0 var(--put-color);
+  }
+
+  .input-group {
+    margin-bottom: 1rem;
+  }
+
+  .input-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 0.3rem;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.03em;
+  }
+
+  .input-group input {
+    width: 100%;
+    padding: 0.5rem 0.7rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.88rem;
+    transition: border-color 0.2s;
+  }
+
+  .input-group input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.7rem;
+  }
+
+  .result-box {
+    margin-top: 1.2rem;
+    padding: 1rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .result-box .label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 0.3rem;
+  }
+
+  .result-box .price {
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .result-box .price.call-price { color: var(--call-color); }
+  .result-box .price.put-price { color: var(--put-color); }
+
+  .result-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.7rem;
+    margin-top: 0.7rem;
+  }
+
+  .result-row .result-box { margin-top: 0; }
+  .result-row .result-box .price { font-size: 1.2rem; }
+
+  .reset-btn {
+    width: 100%;
+    margin-top: 1.2rem;
+    padding: 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+
+  .reset-btn:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* ── CHARTS PANEL ── */
+  .charts-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem 1.5rem 1rem;
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.7rem;
+  }
+
+  .chart-card h3 {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .chart-card h3 span.stock { color: var(--stock-color); }
+  .chart-card h3 span.option { color: var(--accent); }
+
+  .drag-hint {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    background: var(--surface2);
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .drag-hint span { color: var(--highlight); }
+
+  .chart-wrapper {
+    position: relative;
+    height: 300px;
+    cursor: crosshair;
+  }
+
+  .chart-wrapper.option-chart {
+    height: 260px;
+    cursor: default;
+  }
+
+  /* Hover tooltip */
+  .custom-tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text);
+    z-index: 100;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    min-width: 150px;
+  }
+
+  .custom-tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    line-height: 1.5;
+  }
+
+  .custom-tooltip .tt-label { color: var(--text-dim); }
+  .custom-tooltip .tt-value { font-weight: 500; }
+  .custom-tooltip .tt-return.pos { color: var(--call-color); }
+  .custom-tooltip .tt-return.neg { color: var(--put-color); }
+
+  .legend-strip {
+    display: flex;
+    gap: 1.2rem;
+    margin-top: 0.5rem;
+    justify-content: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .legend-dot.stock { background: var(--stock-color); }
+  .legend-dot.option { background: var(--accent); }
+  .legend-dot.control { background: var(--highlight); border: 1px solid #fff; }
+
+  /* PnL summary */
+  .pnl-strip {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .pnl-item {
+    background: var(--surface2);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  .pnl-item .val { font-weight: 500; color: var(--text); }
+  .pnl-item .val.pos { color: var(--call-color); }
+  .pnl-item .val.neg { color: var(--put-color); }
+
+  @media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; }
+    .inputs-panel { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Black-Scholes <span>Path Simulator</span></h1>
+  <p>Drag control points to shape a hypothetical stock path &amp; observe the option price trajectory</p>
+</header>
+
+<div class="container">
+  <!-- LEFT: INPUTS -->
+  <div class="inputs-panel">
+    <h2>Model Parameters</h2>
+
+    <div class="option-type-toggle">
+      <button id="btn-call" class="active-call" onclick="setType('call')">CALL</button>
+      <button id="btn-put" onclick="setType('put')">PUT</button>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Stock Price ($)</label>
+        <input type="number" id="stockPrice" value="100" step="1" min="0.01">
+      </div>
+      <div class="input-group">
+        <label>Strike Price ($)</label>
+        <input type="number" id="strikePrice" value="100" step="1" min="0.01">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Trade Date</label>
+      <input type="date" id="tradeDate">
+    </div>
+    <div class="input-group">
+      <label>Expiration Date</label>
+      <input type="date" id="expirationDate">
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label>Volatility (σ %)</label>
+        <input type="number" id="volatility" value="25" step="1" min="0.1" max="200">
+      </div>
+      <div class="input-group">
+        <label>Risk-Free Rate (%)</label>
+        <input type="number" id="riskFreeRate" value="5" step="0.1" min="0" max="50">
+      </div>
+    </div>
+
+    <div class="result-box">
+      <div class="label">Initial Option Price</div>
+      <div class="price call-price" id="optionPrice">—</div>
+    </div>
+
+    <div class="result-row">
+      <div class="result-box">
+        <div class="label">Final Option</div>
+        <div class="price" id="finalOption" style="color:var(--accent)">—</div>
+      </div>
+      <div class="result-box">
+        <div class="label">Option Return</div>
+        <div class="price" id="optionReturn">—</div>
+      </div>
+    </div>
+
+    <button class="reset-btn" onclick="resetPath()">↻ RESET PATH TO FLAT</button>
+  </div>
+
+  <!-- RIGHT: CHARTS -->
+  <div class="charts-panel">
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3><span class="stock">Stock Price</span> Path</h3>
+        <div class="drag-hint">Drag <span>● gold points</span> to reshape</div>
+      </div>
+      <div class="chart-wrapper" id="stockChartArea">
+        <canvas id="stockChart"></canvas>
+      </div>
+      <div class="legend-strip">
+        <div class="legend-item"><div class="legend-dot control"></div>Control Points (drag)</div>
+        <div class="legend-item"><div class="legend-dot stock"></div>Interpolated Path</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <h3><span class="option">Option Price</span> Trajectory</h3>
+      </div>
+      <div class="chart-wrapper option-chart">
+        <canvas id="optionChart"></canvas>
+      </div>
+      <div class="pnl-strip" id="pnlStrip"></div>
+      <div class="legend-strip">
+        <div class="legend-item"><div class="legend-dot option"></div>Option Price</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="custom-tooltip" id="tooltip">
+  <div class="tt-row"><span class="tt-label">Day</span><span class="tt-value" id="ttDay">—</span></div>
+  <div class="tt-row"><span class="tt-label" id="ttPriceLabel">Price</span><span class="tt-value" id="ttPrice">—</span></div>
+  <div class="tt-row"><span class="tt-label">Return</span><span class="tt-value tt-return" id="ttReturn">—</span></div>
+</div>
+
+<script>
+// ── Black-Scholes ───────────────────────────────────────
+function normCDF(x) {
+  const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x) / Math.SQRT2;
+  const t = 1.0 / (1.0 + p * x);
+  const y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t * Math.exp(-x*x);
+  return 0.5 * (1.0 + sign * y);
+}
+
+function bsPrice(S, K, T, r, sigma, type) {
+  if (T <= 1e-10) return type === 'call' ? Math.max(S - K, 0) : Math.max(K - S, 0);
+  if (sigma <= 0) {
+    const pv = K * Math.exp(-r * T);
+    return type === 'call' ? Math.max(S - pv, 0) : Math.max(pv - S, 0);
+  }
+  const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * Math.sqrt(T));
+  const d2 = d1 - sigma * Math.sqrt(T);
+  if (type === 'call') return S * normCDF(d1) - K * Math.exp(-r * T) * normCDF(d2);
+  else return K * Math.exp(-r * T) * normCDF(-d2) - S * normCDF(-d1);
+}
+
+// ── State ───────────────────────────────────────────────
+let optionType = 'call';
+let stockChartInst = null;
+let optionChartInst = null;
+const NUM_CONTROL = 5;
+const NUM_INTERP = 60; // total points in the path
+let controlPrices = []; // length 5
+let controlIndices = []; // which indices in the full path are control points
+let isDragging = false;
+let dragIndex = -1;
+
+// Full computed paths
+let fullStockPath = [];
+let fullOptionPath = [];
+let fullDayLabels = [];
+
+function setType(type) {
+  optionType = type;
+  document.getElementById('btn-call').className = type==='call' ? 'active-call' : '';
+  document.getElementById('btn-put').className = type==='put' ? 'active-put' : '';
+  const priceEl = document.getElementById('optionPrice');
+  priceEl.className = 'price ' + (type==='call' ? 'call-price' : 'put-price');
+  recalculate();
+}
+
+function getInputs() {
+  const S = parseFloat(document.getElementById('stockPrice').value) || 100;
+  const K = parseFloat(document.getElementById('strikePrice').value) || 100;
+  const sigma = (parseFloat(document.getElementById('volatility').value) || 25) / 100;
+  const r = (parseFloat(document.getElementById('riskFreeRate').value) || 5) / 100;
+  const td = document.getElementById('tradeDate').value;
+  const ed = document.getElementById('expirationDate').value;
+  const tradeDate = new Date(td + 'T00:00:00');
+  const expDate = new Date(ed + 'T00:00:00');
+  const DTE = Math.max((expDate - tradeDate) / (1000*60*60*24), 1);
+  return { S, K, r, sigma, DTE };
+}
+
+function resetPath() {
+  const { S } = getInputs();
+  controlPrices = Array(NUM_CONTROL).fill(S);
+  refreshYBounds();
+  recalculate();
+}
+
+// ── Interpolation ───────────────────────────────────────
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function interpolatePath() {
+  const { DTE } = getInputs();
+  const n = NUM_INTERP;
+  controlIndices = [];
+  for (let i = 0; i < NUM_CONTROL; i++) {
+    controlIndices.push(Math.round(i * (n - 1) / (NUM_CONTROL - 1)));
+  }
+
+  fullStockPath = new Array(n);
+  fullDayLabels = new Array(n);
+
+  // Set control points
+  for (let i = 0; i < NUM_CONTROL; i++) {
+    fullStockPath[controlIndices[i]] = controlPrices[i];
+  }
+
+  // Label each point with a day number
+  for (let i = 0; i < n; i++) {
+    fullDayLabels[i] = Math.round((i / (n - 1)) * DTE);
+  }
+
+  // Linear interpolation between control points
+  for (let seg = 0; seg < NUM_CONTROL - 1; seg++) {
+    const idxA = controlIndices[seg];
+    const idxB = controlIndices[seg + 1];
+    const pA = controlPrices[seg];
+    const pB = controlPrices[seg + 1];
+    for (let i = idxA; i <= idxB; i++) {
+      const t = (i - idxA) / (idxB - idxA);
+      fullStockPath[i] = lerp(pA, pB, t);
+    }
+  }
+}
+
+// ── Compute option path ─────────────────────────────────
+function computeOptionPath() {
+  const { K, r, sigma, DTE } = getInputs();
+  fullOptionPath = fullStockPath.map((S, i) => {
+    const dayElapsed = fullDayLabels[i];
+    const daysRemaining = Math.max(DTE - dayElapsed, 0);
+    const T = daysRemaining / 365;
+    return bsPrice(S, K, T, r, sigma, optionType);
+  });
+}
+
+// ── Chart rendering ─────────────────────────────────────
+const stockRGB = '210,168,255';
+const optionRGB = '88,166,255';
+const highlightColor = '#ffd700';
+
+let cachedYBounds = null;
+
+function getStockYBounds() {
+  const { S, sigma, DTE } = getInputs();
+  const annualMove = S * sigma;
+  const periodMove = annualMove * Math.sqrt(DTE / 365);
+  const band = Math.max(periodMove * 2, S * 0.1);
+  return { min: Math.max(S - band, 0), max: S + band };
+}
+
+function refreshYBounds() {
+  cachedYBounds = getStockYBounds();
+}
+
+function buildStockChart() {
+  const canvas = document.getElementById('stockChart');
+  const yBounds = cachedYBounds || getStockYBounds();
+  const labels = fullDayLabels.map(d => d.toString());
+  const controlData = fullStockPath.map((v, i) => controlIndices.includes(i) ? v : null);
+  const controlRadius = fullStockPath.map((_, i) => controlIndices.includes(i) ? 8 : 0);
+  const controlHover = fullStockPath.map((_, i) => controlIndices.includes(i) ? 11 : 0);
+
+  if (stockChartInst) {
+    stockChartInst.data.labels = labels;
+    stockChartInst.data.datasets[0].data = [...fullStockPath];
+    stockChartInst.data.datasets[1].data = controlData;
+    stockChartInst.data.datasets[1].pointRadius = controlRadius;
+    stockChartInst.data.datasets[1].pointHoverRadius = controlHover;
+    stockChartInst.options.scales.y.min = yBounds.min;
+    stockChartInst.options.scales.y.max = yBounds.max;
+    stockChartInst.update('none');
+    return;
+  }
+
+  stockChartInst = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Stock',
+          data: [...fullStockPath],
+          borderColor: `rgba(${stockRGB},0.85)`,
+          backgroundColor: (c) => {
+            const chart = c.chart;
+            const { ctx: cx, chartArea } = chart;
+            if (!chartArea) return `rgba(${stockRGB},0.08)`;
+            const g = cx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            g.addColorStop(0, `rgba(${stockRGB},0.15)`);
+            g.addColorStop(1, `rgba(${stockRGB},0.0)`);
+            return g;
+          },
+          fill: true,
+          borderWidth: 2.5,
+          tension: 0.15,
+          pointRadius: 0,
+          pointHitRadius: 8,
+          order: 2,
+        },
+        {
+          label: 'Controls',
+          data: controlData,
+          borderColor: '#fff',
+          backgroundColor: highlightColor,
+          pointRadius: controlRadius,
+          pointHoverRadius: controlHover,
+          pointBorderWidth: 2,
+          pointBorderColor: '#fff',
+          pointStyle: 'circle',
+          showLine: false,
+          spanGaps: false,
+          order: 1,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Day', color: '#8b949e', font: { family: 'DM Mono', size: 11 } },
+          ticks: { color: '#8b949e', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10 },
+          grid: { color: 'rgba(48,54,61,0.4)', drawTicks: false },
+          border: { color: '#30363d' },
+        },
+        y: {
+          title: { display: true, text: 'Stock Price ($)', color: '#8b949e', font: { family: 'DM Mono', size: 11 } },
+          ticks: { color: '#8b949e', font: { family: 'DM Mono', size: 10 }, callback: v => '$' + v.toFixed(0) },
+          grid: { color: 'rgba(48,54,61,0.4)', drawTicks: false },
+          border: { color: '#30363d' },
+          min: yBounds.min,
+          max: yBounds.max,
+        }
+      },
+      interaction: { intersect: false, mode: 'index' },
+    }
+  });
+}
+
+function buildOptionChart() {
+  const canvas = document.getElementById('optionChart');
+  const labels = fullDayLabels.map(d => d.toString());
+
+  if (optionChartInst) {
+    optionChartInst.data.labels = labels;
+    optionChartInst.data.datasets[0].data = [...fullOptionPath];
+    optionChartInst.update('none');
+    return;
+  }
+
+  optionChartInst = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Option',
+        data: [...fullOptionPath],
+        borderColor: `rgba(${optionRGB},0.9)`,
+        backgroundColor: (c) => {
+          const chart = c.chart;
+          const { ctx: cx, chartArea } = chart;
+          if (!chartArea) return `rgba(${optionRGB},0.08)`;
+          const g = cx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, `rgba(${optionRGB},0.18)`);
+          g.addColorStop(1, `rgba(${optionRGB},0.0)`);
+          return g;
+        },
+        fill: true,
+        borderWidth: 2.5,
+        tension: 0.15,
+        pointRadius: 0,
+        pointHitRadius: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Day', color: '#8b949e', font: { family: 'DM Mono', size: 11 } },
+          ticks: { color: '#8b949e', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 10 },
+          grid: { color: 'rgba(48,54,61,0.4)', drawTicks: false },
+          border: { color: '#30363d' },
+        },
+        y: {
+          title: { display: true, text: 'Option Price ($)', color: '#8b949e', font: { family: 'DM Mono', size: 11 } },
+          ticks: { color: '#8b949e', font: { family: 'DM Mono', size: 10 }, callback: v => '$' + v.toFixed(1) },
+          grid: { color: 'rgba(48,54,61,0.4)', drawTicks: false },
+          border: { color: '#30363d' },
+          beginAtZero: true,
+        }
+      },
+      interaction: { intersect: false, mode: 'index' },
+    }
+  });
+}
+
+function updatePnL() {
+  const initOpt = fullOptionPath[0];
+  const finalOpt = fullOptionPath[fullOptionPath.length - 1];
+  const initStock = fullStockPath[0];
+  const finalStock = fullStockPath[fullStockPath.length - 1];
+  const optRet = initOpt > 0 ? ((finalOpt - initOpt) / initOpt * 100) : 0;
+  const stkRet = initStock > 0 ? ((finalStock - initStock) / initStock * 100) : 0;
+
+  const priceEl = document.getElementById('optionPrice');
+  priceEl.textContent = '$' + initOpt.toFixed(2);
+
+  const finalEl = document.getElementById('finalOption');
+  finalEl.textContent = '$' + finalOpt.toFixed(2);
+
+  const retEl = document.getElementById('optionReturn');
+  retEl.textContent = (optRet >= 0 ? '+' : '') + optRet.toFixed(1) + '%';
+  retEl.style.color = optRet >= 0 ? 'var(--call-color)' : 'var(--put-color)';
+
+  const strip = document.getElementById('pnlStrip');
+  const pnlDollar = finalOpt - initOpt;
+  strip.innerHTML = `
+    <div class="pnl-item">Entry <span class="val">$${initOpt.toFixed(2)}</span></div>
+    <div class="pnl-item">Exit <span class="val">$${finalOpt.toFixed(2)}</span></div>
+    <div class="pnl-item">P&L <span class="val ${pnlDollar>=0?'pos':'neg'}">${pnlDollar>=0?'+':''}$${pnlDollar.toFixed(2)}</span></div>
+    <div class="pnl-item">Return <span class="val ${optRet>=0?'pos':'neg'}">${optRet>=0?'+':''}${optRet.toFixed(1)}%</span></div>
+    <div class="pnl-item">Stock Δ <span class="val ${stkRet>=0?'pos':'neg'}">${stkRet>=0?'+':''}${stkRet.toFixed(1)}%</span></div>
+  `;
+}
+
+// ── Main recalculate ────────────────────────────────────
+function recalculate() {
+  interpolatePath();
+  computeOptionPath();
+  buildStockChart();
+  buildOptionChart();
+  updatePnL();
+}
+
+// ── Drag interaction ────────────────────────────────────
+function getMouseIndex(chart, evt) {
+  const rect = chart.canvas.getBoundingClientRect();
+  const x = evt.clientX - rect.left;
+  const xScale = chart.scales.x;
+  const val = xScale.getValueForPixel(x);
+  return Math.round(Math.max(0, Math.min(NUM_INTERP - 1, val)));
+}
+
+function getMousePrice(chart, evt) {
+  const rect = chart.canvas.getBoundingClientRect();
+  const y = evt.clientY - rect.top;
+  const yScale = chart.scales.y;
+  return yScale.getValueForPixel(y);
+}
+
+function findNearestControl(mouseIdx) {
+  let best = -1, bestDist = Infinity;
+  controlIndices.forEach((ci, i) => {
+    const dist = Math.abs(ci - mouseIdx);
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  });
+  // Only snap if within reasonable range
+  if (bestDist <= Math.ceil(NUM_INTERP / NUM_CONTROL) * 0.8) return best;
+  return -1;
+}
+
+function setupDrag() {
+  const wrapper = document.getElementById('stockChartArea');
+  const canvas = document.getElementById('stockChart');
+
+  canvas.addEventListener('mousedown', (e) => {
+    if (!stockChartInst) return;
+    const idx = getMouseIndex(stockChartInst, e);
+    const ci = findNearestControl(idx);
+    if (ci >= 0) {
+      isDragging = true;
+      dragIndex = ci;
+      canvas.style.cursor = 'grabbing';
+    }
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (isDragging && dragIndex >= 0 && stockChartInst) {
+      const price = getMousePrice(stockChartInst, e);
+      if (price > 0) {
+        controlPrices[dragIndex] = Math.max(price, 0.5);
+        // If dragging the first control point, update stock price input
+        if (dragIndex === 0) {
+          document.getElementById('stockPrice').value = price.toFixed(2);
+        }
+        recalculate();
+      }
+    }
+
+    // Custom tooltip on both charts
+    showTooltip(e);
+  });
+
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+    dragIndex = -1;
+    canvas.style.cursor = 'crosshair';
+  });
+
+  // Also handle hover tooltip on option chart
+  const optCanvas = document.getElementById('optionChart');
+  optCanvas.addEventListener('mousemove', (e) => showTooltip(e));
+}
+
+function showTooltip(e) {
+  const tooltip = document.getElementById('tooltip');
+  let chart = null;
+  let isOver = false;
+  let isStockChart = false;
+
+  // Check which canvas we're over
+  if (stockChartInst) {
+    const rect = stockChartInst.canvas.getBoundingClientRect();
+    if (e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom) {
+      chart = stockChartInst;
+      isOver = true;
+      isStockChart = true;
+    }
+  }
+  if (!isOver && optionChartInst) {
+    const rect = optionChartInst.canvas.getBoundingClientRect();
+    if (e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom) {
+      chart = optionChartInst;
+      isOver = true;
+      isStockChart = false;
+    }
+  }
+
+  if (!isOver || !chart) {
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  const idx = getMouseIndex(chart, e);
+  if (idx < 0 || idx >= fullStockPath.length) {
+    tooltip.style.display = 'none';
+    return;
+  }
+
+  const stockP = fullStockPath[idx];
+  const optP = fullOptionPath[idx];
+  const initStock = fullStockPath[0];
+  const initOpt = fullOptionPath[0];
+
+  document.getElementById('ttDay').textContent = fullDayLabels[idx];
+
+  if (isStockChart) {
+    document.getElementById('ttPriceLabel').textContent = 'Stock';
+    document.getElementById('ttPrice').textContent = '$' + stockP.toFixed(2);
+    const ret = initStock > 0 ? ((stockP - initStock) / initStock * 100) : 0;
+    const retEl = document.getElementById('ttReturn');
+    retEl.textContent = (ret >= 0 ? '+' : '') + ret.toFixed(1) + '%';
+    retEl.className = 'tt-value tt-return ' + (ret >= 0 ? 'pos' : 'neg');
+  } else {
+    document.getElementById('ttPriceLabel').textContent = 'Option';
+    document.getElementById('ttPrice').textContent = '$' + optP.toFixed(2);
+    const ret = initOpt > 0 ? ((optP - initOpt) / initOpt * 100) : 0;
+    const retEl = document.getElementById('ttReturn');
+    retEl.textContent = (ret >= 0 ? '+' : '') + ret.toFixed(1) + '%';
+    retEl.className = 'tt-value tt-return ' + (ret >= 0 ? 'pos' : 'neg');
+  }
+
+  tooltip.style.display = 'block';
+  const tx = e.clientX + 16;
+  const ty = e.clientY - 40;
+  tooltip.style.left = Math.min(tx, window.innerWidth - 200) + 'px';
+  tooltip.style.top = Math.max(ty, 8) + 'px';
+}
+
+// Hide tooltip when mouse leaves chart areas
+document.addEventListener('mousemove', (e) => {
+  const s = stockChartInst?.canvas?.getBoundingClientRect();
+  const o = optionChartInst?.canvas?.getBoundingClientRect();
+  let over = false;
+  if (s && e.clientX >= s.left && e.clientX <= s.right && e.clientY >= s.top && e.clientY <= s.bottom) over = true;
+  if (o && e.clientX >= o.left && e.clientX <= o.right && e.clientY >= o.top && e.clientY <= o.bottom) over = true;
+  if (!over) document.getElementById('tooltip').style.display = 'none';
+});
+
+// ── Init ────────────────────────────────────────────────
+function init() {
+  const today = new Date();
+  const exp = new Date(today);
+  exp.setMonth(exp.getMonth() + 3);
+  document.getElementById('tradeDate').value = today.toISOString().split('T')[0];
+  document.getElementById('expirationDate').value = exp.toISOString().split('T')[0];
+
+  const S = parseFloat(document.getElementById('stockPrice').value);
+  controlPrices = Array(NUM_CONTROL).fill(S);
+
+  document.querySelectorAll('.inputs-panel input').forEach(el => {
+    el.addEventListener('input', () => {
+      if (el.id === 'stockPrice') {
+        controlPrices[0] = parseFloat(el.value) || 100;
+      }
+      refreshYBounds();
+      recalculate();
+    });
+    el.addEventListener('change', () => {
+      if (el.id === 'stockPrice') {
+        controlPrices[0] = parseFloat(el.value) || 100;
+      }
+      refreshYBounds();
+      recalculate();
+    });
+  });
+
+  refreshYBounds();
+  recalculate();
+  setupDrag();
+}
+
+init();
+</script>
+</body>
+</html>
